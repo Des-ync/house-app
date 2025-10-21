@@ -25,7 +25,7 @@ import ComparisonTray from './components/ComparisonTray';
 import DemoDataBanner from './components/DemoDataBanner';
 
 import { findProperties } from './services/geminiService';
-import type { Property } from './types';
+import type { Property, FiltersState } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 
 const Map = React.lazy(() => import('./components/Map'));
@@ -52,11 +52,11 @@ const App: React.FC = () => {
   const [searchLocation, setSearchLocation] = useState('Accra, Ghana');
   
   // Filters State
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FiltersState>({
     maxPrice: 1000000,
     beds: 0,
     verified: false,
-    neighborhoods: [] as string[],
+    neighborhoods: [],
   });
   const [polygonPath, setPolygonPath] = useState<google.maps.LatLng[] | null>(null);
   const [clearDrawingTrigger, setClearDrawingTrigger] = useState(0);
@@ -68,6 +68,12 @@ const App: React.FC = () => {
 
   // Geolocation
   const geolocation = useGeolocation();
+  const userLocation = useMemo(() => {
+    if (geolocation.latitude !== null && geolocation.longitude !== null) {
+      return { lat: geolocation.latitude, lng: geolocation.longitude };
+    }
+    return null;
+  }, [geolocation.latitude, geolocation.longitude]);
 
   // Effects
   useEffect(() => {
@@ -155,15 +161,15 @@ const App: React.FC = () => {
 
   const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
   
-  const handleSearch = (location: string) => {
+  const handleSearch = useCallback((location: string) => {
     setSearchLocation(location);
     setPolygonPath(null); // Clear polygon on new search
     setClearDrawingTrigger(c => c + 1); // Trigger map to clear drawing
-  };
+  }, []);
 
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
       handleSearch('Accra, Ghana');
-  }
+  }, [handleSearch]);
 
   const handleCardClick = (id: string) => {
     setSelectedPropertyId(id);
@@ -173,9 +179,9 @@ const App: React.FC = () => {
       setHoveredPropertyId(id);
   };
 
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: FiltersState) => {
       setFilters(newFilters);
-  }
+  };
 
   const handlePolygonDrawn = (path: google.maps.LatLng[]) => {
       setPolygonPath(path);
@@ -247,13 +253,14 @@ const App: React.FC = () => {
         {/* Right Panel (Map) */}
         <div className="lg:col-span-2 xl:col-span-3 h-full min-h-[400px] lg:min-h-0">
           <Suspense fallback={<div className="w-full h-full bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse flex items-center justify-center">Loading Map...</div>}>
-            <Map 
-                properties={filteredProperties} 
+            <Map
+                properties={filteredProperties}
                 selectedPropertyId={hoveredPropertyId || selectedPropertyId}
                 onMarkerClick={handleCardClick}
                 onPolygonDrawn={handlePolygonDrawn}
                 onDrawingCleared={handleDrawingCleared}
                 clearDrawingTrigger={clearDrawingTrigger}
+                userLocation={userLocation}
             />
           </Suspense>
         </div>

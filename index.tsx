@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 
 // Dynamically load the Google Maps script to correctly insert the API key
-const GOOGLE_MAPS_API_KEY = process.env.API_KEY;
+const env = import.meta.env as Record<string, string | undefined>;
+const GOOGLE_MAPS_API_KEY = env.VITE_GOOGLE_MAPS_API_KEY ?? env.VITE_MAPS_API_KEY ?? env.GOOGLE_MAPS_API_KEY;
 
 const loadGoogleMapsScript = () => {
   // Check if the script is already loaded or being loaded

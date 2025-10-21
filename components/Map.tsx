@@ -6,7 +6,8 @@ declare namespace google.maps {
     class Map { constructor(mapDiv: HTMLElement, opts?: any); panTo(latLng: LatLng | {lat: number, lng: number}): void; setZoom(zoom: number): void; fitBounds(bounds: LatLngBounds, padding: any): void; }
     class Polygon { constructor(opts?: any); getPath(): { getArray: () => LatLng[] }; setMap(map: Map | null): void; }
     namespace event {
-        function addListener(instance: any, eventName: string, handler: (...args: any[]) => void): void;
+        class MapsEventListener { remove(): void; }
+        function addListener(instance: any, eventName: string, handler: (...args: any[]) => void): MapsEventListener;
     }
     namespace drawing {
         class DrawingManager { constructor(opts?: any); getDrawingMode(): string | null; setMap(map: Map | null): void; setDrawingMode(mode: string | null): void; }
@@ -25,7 +26,7 @@ declare global {
   }
 }
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { Property } from '../types';
 import { DrawIcon } from './icons';
 
@@ -36,22 +37,34 @@ interface MapProps {
   onPolygonDrawn: (path: google.maps.LatLng[]) => void;
   onDrawingCleared: () => void;
   clearDrawingTrigger: number;
+  userLocation: { lat: number; lng: number } | null;
 }
 
-const Map: React.FC<MapProps> = ({ properties, selectedPropertyId, onMarkerClick, onPolygonDrawn, onDrawingCleared, clearDrawingTrigger }) => {
+const Map: React.FC<MapProps> = ({ properties, selectedPropertyId, onMarkerClick, onPolygonDrawn, onDrawingCleared, clearDrawingTrigger, userLocation }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
   const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
   const drawnPolygonRef = useRef<google.maps.Polygon | null>(null);
+  const onPolygonDrawnRef = useRef(onPolygonDrawn);
+  const onDrawingClearedRef = useRef(onDrawingCleared);
+
+  useEffect(() => {
+    onPolygonDrawnRef.current = onPolygonDrawn;
+  }, [onPolygonDrawn]);
+
+  useEffect(() => {
+    onDrawingClearedRef.current = onDrawingCleared;
+  }, [onDrawingCleared]);
 
   // Initialize map
   useEffect(() => {
     if (!mapRef.current || mapInstance.current || !window.google?.maps) return;
-    
+
+    const fallbackCenter = { lat: 5.6037, lng: -0.1870 };
     const initialCenter = properties.length > 0
       ? { lat: properties[0].lat, lng: properties[0].lng }
-      : { lat: 5.6037, lng: -0.1870 };
+      : userLocation ?? fallbackCenter;
 
     mapInstance.current = new window.google.maps.Map(mapRef.current, {
       center: initialCenter,
@@ -74,31 +87,54 @@ const Map: React.FC<MapProps> = ({ properties, selectedPropertyId, onMarkerClick
       ],
     });
 
-    drawingManagerRef.current = new window.google.maps.drawing.DrawingManager({
-        drawingMode: null,
-        drawingControl: false,
-        polygonOptions: {
-            fillColor: '#2563EB',
-            fillOpacity: 0.2,
-            strokeColor: '#2563EB',
-            strokeWeight: 2,
-            clickable: false,
-            editable: false,
-            zIndex: 1,
-        },
-    });
+    if (window.google?.maps?.drawing) {
+      drawingManagerRef.current = new window.google.maps.drawing.DrawingManager({
+          drawingMode: null,
+          drawingControl: false,
+          polygonOptions: {
+              fillColor: '#2563EB',
+              fillOpacity: 0.2,
+              strokeColor: '#2563EB',
+              strokeWeight: 2,
+              clickable: false,
+              editable: false,
+              zIndex: 1,
+          },
+      });
+    }
 
-    window.google.maps.event.addListener(drawingManagerRef.current, 'polygoncomplete', (polygon: google.maps.Polygon) => {
-        if (drawnPolygonRef.current) {
-            drawnPolygonRef.current.setMap(null);
-        }
-        drawnPolygonRef.current = polygon;
-        const path = polygon.getPath().getArray();
-        onPolygonDrawn(path);
-        if (drawingManagerRef.current) {
-            drawingManagerRef.current.setDrawingMode(null);
-        }
-    });
+    let polygonCompleteListener: google.maps.event.MapsEventListener | null = null;
+
+    if (drawingManagerRef.current && window.google?.maps?.event) {
+      polygonCompleteListener = window.google.maps.event.addListener(drawingManagerRef.current, 'polygoncomplete', (polygon: google.maps.Polygon) => {
+          if (drawnPolygonRef.current) {
+              drawnPolygonRef.current.setMap(null);
+          }
+          drawnPolygonRef.current = polygon;
+          const path = polygon.getPath().getArray();
+          onPolygonDrawnRef.current?.(path);
+          if (drawingManagerRef.current) {
+              drawingManagerRef.current.setDrawingMode(null);
+          }
+      });
+    }
+
+    return () => {
+      polygonCompleteListener?.remove?.();
+      Object.values(markersRef.current).forEach(marker => {
+        marker.map = null;
+      });
+      markersRef.current = {};
+      if (drawingManagerRef.current) {
+        drawingManagerRef.current.setMap(null);
+        drawingManagerRef.current = null;
+      }
+      if (drawnPolygonRef.current) {
+        drawnPolygonRef.current.setMap(null);
+        drawnPolygonRef.current = null;
+      }
+      mapInstance.current = null;
+    };
 
   }, []);
 
@@ -148,29 +184,41 @@ const Map: React.FC<MapProps> = ({ properties, selectedPropertyId, onMarkerClick
     }
   }, [selectedPropertyId, properties]);
 
-  const toggleDrawing = () => {
-      if (!drawingManagerRef.current || !mapInstance.current || !window.google) return;
+  useEffect(() => {
+    if (!mapInstance.current || !userLocation) return;
+    if (properties.length === 0 && !selectedPropertyId && !drawnPolygonRef.current) {
+      mapInstance.current.panTo(userLocation);
+      mapInstance.current.setZoom(12);
+    }
+  }, [userLocation, properties.length, selectedPropertyId]);
+
+  const toggleDrawing = useCallback(() => {
+      if (!drawingManagerRef.current || !mapInstance.current || !window.google?.maps?.drawing) return;
       if (drawingManagerRef.current.getDrawingMode() === window.google.maps.drawing.OverlayType.POLYGON) {
           drawingManagerRef.current.setDrawingMode(null);
+          drawingManagerRef.current.setMap(null);
       } else {
           drawingManagerRef.current.setMap(mapInstance.current);
           drawingManagerRef.current.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
       }
-  };
-  
-  const clearDrawing = () => {
+  }, []);
+
+  const clearDrawing = useCallback(() => {
       if (drawnPolygonRef.current) {
           drawnPolygonRef.current.setMap(null);
           drawnPolygonRef.current = null;
       }
-      onDrawingCleared();
-  }
+      if (drawingManagerRef.current) {
+          drawingManagerRef.current.setDrawingMode(null);
+      }
+      onDrawingClearedRef.current?.();
+  }, []);
 
   useEffect(() => {
       if (clearDrawingTrigger > 0) {
           clearDrawing();
       }
-  }, [clearDrawingTrigger]);
+  }, [clearDrawingTrigger, clearDrawing]);
 
   return (
     <div className="w-full h-full rounded-lg shadow-inner relative">
