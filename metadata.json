@@ -1,0 +1,7 @@
+{
+  "name": "TEST 1",
+  "description": "",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
