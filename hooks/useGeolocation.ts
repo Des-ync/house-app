@@ -1,11 +1,16 @@
 
 import { useState, useEffect } from 'react';
 
+interface GeolocationError {
+  code: number;
+  message: string;
+}
+
 interface GeolocationState {
   latitude: number | null;
   longitude: number | null;
   loading: boolean;
-  error: GeolocationPositionError | null;
+  error: GeolocationError | null;
 }
 
 export const useGeolocation = () => {
@@ -17,8 +22,15 @@ export const useGeolocation = () => {
   });
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocation(prev => ({ ...prev, loading: false, error: new GeolocationPositionError() }));
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocation(prev => ({
+        ...prev,
+        loading: false,
+        error: {
+          code: 0,
+          message: 'Geolocation is not supported by this browser.',
+        },
+      }));
       return;
     }
 
@@ -32,7 +44,14 @@ export const useGeolocation = () => {
     };
 
     const handleError = (error: GeolocationPositionError) => {
-      setLocation(prev => ({ ...prev, loading: false, error }));
+      setLocation(prev => ({
+        ...prev,
+        loading: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      }));
     };
 
     navigator.geolocation.getCurrentPosition(handleSuccess, handleError);

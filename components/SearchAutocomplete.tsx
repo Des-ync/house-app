@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Spinner } from './icons';
 
 interface SearchAutocompleteProps {
   onSearch: (location: string) => void;
@@ -10,82 +9,118 @@ interface SearchAutocompleteProps {
 const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({ onSearch, isLoading, onClear }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteRef = useRef<any>(null); // To hold the element instance
-  const [currentValue, setCurrentValue] = useState('Accra, Ghana');
+  const DEFAULT_LOCATION = 'Accra, Ghana';
+  const [currentValue, setCurrentValue] = useState(DEFAULT_LOCATION);
+  const onSearchRef = useRef(onSearch);
 
   useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
+
+  useEffect(() => {
+    let intervalId: number | null = null;
+    let styleElement: HTMLStyleElement | null = null;
+    let autocompleteInstance: any = null;
+
+    const handlePlaceChange = (event: any) => {
+      const place = event.detail?.place;
+      if (place?.formattedAddress) {
+        setCurrentValue(place.formattedAddress);
+        onSearchRef.current(place.formattedAddress);
+      }
+    };
+
     const initAutocomplete = () => {
-      if (!containerRef.current || !(window as any).google?.maps?.places?.PlaceAutocompleteElement) return;
+      if (!containerRef.current || !(window as any).google?.maps?.places?.PlaceAutocompleteElement) {
+        return;
+      }
 
       if (!autocompleteRef.current) {
         const autocomplete = new (window as any).google.maps.places.PlaceAutocompleteElement({
            types: ['(cities)'],
         });
-        
-        // Style the input element within the web component
-        const style = document.createElement('style');
-        style.textContent = `
-          gmp-place-autocomplete input {
-            padding: 0.5rem 1rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.375rem;
-            width: 12rem; /* 192px */
-            background-color: white;
-            color: #0f172a;
-            transition: all 150ms ease-in-out;
-          }
-          .dark gmp-place-autocomplete input {
-            border-color: #475569;
-            background-color: #334155;
-            color: #f1f5f9;
-          }
-          gmp-place-autocomplete input:focus {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            border-color: #3b82f6;
-            --tw-ring-color: #3b82f6;
-            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
-          }
-        `;
-        document.head.appendChild(style);
 
-        containerRef.current.innerHTML = ''; // Clear previous
+        if (!document.getElementById('search-autocomplete-style')) {
+          styleElement = document.createElement('style');
+          styleElement.id = 'search-autocomplete-style';
+          styleElement.textContent = `
+            gmp-place-autocomplete input {
+              padding: 0.5rem 1rem;
+              border: 1px solid #cbd5e1;
+              border-radius: 0.375rem;
+              width: 12rem; /* 192px */
+              background-color: white;
+              color: #0f172a;
+              transition: all 150ms ease-in-out;
+            }
+            .dark gmp-place-autocomplete input {
+              border-color: #475569;
+              background-color: #334155;
+              color: #f1f5f9;
+            }
+            gmp-place-autocomplete input:focus {
+              outline: 2px solid transparent;
+              outline-offset: 2px;
+              border-color: #3b82f6;
+              --tw-ring-color: #3b82f6;
+              --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+              --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+              box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+            }
+          `;
+          document.head.appendChild(styleElement);
+        }
+
+        containerRef.current.innerHTML = '';
         containerRef.current.appendChild(autocomplete);
         autocompleteRef.current = autocomplete;
-        autocompleteRef.current.value = currentValue;
-
-        autocomplete.addEventListener('gmp-placechange', (event: any) => {
-          const place = event.detail.place;
-          if (place.formattedAddress) {
-            setCurrentValue(place.formattedAddress);
-            onSearch(place.formattedAddress);
-          }
-        });
+        autocompleteRef.current.value = DEFAULT_LOCATION;
+        autocomplete.addEventListener('gmp-placechange', handlePlaceChange);
+        autocompleteInstance = autocomplete;
+      } else {
+        autocompleteInstance = autocompleteRef.current;
       }
     };
-    
-    // Check if google maps is loaded, if not, wait.
+
     if ((window as any).google?.maps?.places?.PlaceAutocompleteElement) {
-        initAutocomplete();
+      initAutocomplete();
     } else {
-        const interval = setInterval(() => {
-            if ((window as any).google?.maps?.places?.PlaceAutocompleteElement) {
-                initAutocomplete();
-                clearInterval(interval);
-            }
-        }, 100);
+      intervalId = window.setInterval(() => {
+        if ((window as any).google?.maps?.places?.PlaceAutocompleteElement) {
+          initAutocomplete();
+          if (intervalId !== null) {
+            window.clearInterval(intervalId);
+            intervalId = null;
+          }
+        }
+      }, 100);
     }
 
-  }, [onSearch]);
+    return () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+
+      const instance = autocompleteInstance || autocompleteRef.current;
+      if (instance?.removeEventListener) {
+        instance.removeEventListener('gmp-placechange', handlePlaceChange);
+      }
+
+      if (styleElement && styleElement.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
+      }
+
+      autocompleteRef.current = null;
+    };
+  }, []);
   
   const handleClear = () => {
-      setCurrentValue('Accra, Ghana');
-      if (autocompleteRef.current?.input) {
-          autocompleteRef.current.input.value = 'Accra, Ghana';
+      setCurrentValue(DEFAULT_LOCATION);
+      if (autocompleteRef.current) {
+          autocompleteRef.current.value = DEFAULT_LOCATION;
       }
       onClear();
-  }
+  };
 
   return (
     <div className="flex items-center gap-2">

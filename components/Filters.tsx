@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { FiltersState } from '../types';
 
 interface FiltersProps {
-  onFilterChange: (filters: any) => void;
-  currentFilters: {
-    maxPrice: number;
-    beds: number;
-    verified: boolean;
-    neighborhoods: string[];
-  };
+  onFilterChange: (filters: FiltersState) => void;
+  currentFilters: FiltersState;
   neighborhoods: string[];
   currencyCode: string;
 }
@@ -39,7 +35,7 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
         ? currentFilters.neighborhoods.filter(n => n !== neighborhood)
         : [...currentFilters.neighborhoods, neighborhood];
       onFilterChange({ ...currentFilters, neighborhoods: newNeighborhoods });
-  }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,7 +45,7 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [dropdownRef]);
+  }, []);
 
 
   return (
