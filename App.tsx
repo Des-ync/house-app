@@ -1,15 +1,5 @@
-// Minimal type definitions for Google Maps API to satisfy TypeScript strict mode
-// This is a workaround for environments where @types/google.maps cannot be installed.
-declare namespace google.maps {
-    class LatLng { constructor(lat: number, lng: number); }
-    class Polygon { constructor(opts?: { paths: LatLng[] }); }
-    namespace geometry.poly {
-        function containsLocation(latLng: LatLng, polygon: Polygon): boolean;
-    }
-}
-// End of type definitions
-
 // Fix: Add `google` to the window object to resolve TypeScript errors.
+// This is no longer strictly necessary but kept for any potential minor type overlaps.
 declare global {
   interface Window {
     google: any;
@@ -25,12 +15,16 @@ import ComparisonTray from './components/ComparisonTray';
 import DemoDataBanner from './components/DemoDataBanner';
 
 import { findProperties } from './services/geminiService';
-import type { Property, FiltersState } from './types';
-import { useGeolocation } from './hooks/useGeolocation';
+import type { Property } from './types';
 
-const Map = React.lazy(() => import('./components/Map'));
 const PropertyDetailModal = React.lazy(() => import('./components/PropertyDetailModal'));
 const ComparisonView = React.lazy(() => import('./components/ComparisonView'));
+
+type SortConfig = {
+  key: 'price' | 'beds' | 'sqft';
+  direction: 'asc' | 'desc';
+};
+
 
 const App: React.FC = () => {
   // Authentication State
@@ -52,28 +46,20 @@ const App: React.FC = () => {
   const [searchLocation, setSearchLocation] = useState('Accra, Ghana');
   
   // Filters State
-  const [filters, setFilters] = useState<FiltersState>({
+  const [filters, setFilters] = useState({
     maxPrice: 1000000,
     beds: 0,
     verified: false,
-    neighborhoods: [],
+    neighborhoods: [] as string[],
   });
-  const [polygonPath, setPolygonPath] = useState<google.maps.LatLng[] | null>(null);
-  const [clearDrawingTrigger, setClearDrawingTrigger] = useState(0);
+  
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'price', direction: 'asc' });
 
 
   // Comparison State
   const [compareList, setCompareList] = useState<Property[]>([]);
   const [isComparisonViewVisible, setIsComparisonViewVisible] = useState(false);
-
-  // Geolocation
-  const geolocation = useGeolocation();
-  const userLocation = useMemo(() => {
-    if (geolocation.latitude !== null && geolocation.longitude !== null) {
-      return { lat: geolocation.latitude, lng: geolocation.longitude };
-    }
-    return null;
-  }, [geolocation.latitude, geolocation.longitude]);
 
   // Effects
   useEffect(() => {
@@ -102,7 +88,7 @@ const App: React.FC = () => {
     fetchAndSetProperties(searchLocation);
   }, [searchLocation, fetchAndSetProperties]);
 
-  // Filtering Logic
+  // Filtering and Sorting Logic
   const filteredProperties = useMemo(() => {
     let properties = allProperties;
 
@@ -123,20 +109,28 @@ const App: React.FC = () => {
     if (filters.neighborhoods.length > 0) {
         properties = properties.filter(p => filters.neighborhoods.includes(p.neighborhood));
     }
+    
+    // Sort the filtered properties
+    const sortableProperties = [...properties];
+    sortableProperties.sort((a, b) => {
+        const { key, direction } = sortConfig;
+        const sortKey = key === 'price' ? 'priceMinorUnits' : key;
+        
+        const valA = a[sortKey as keyof Property] as number;
+        const valB = b[sortKey as keyof Property] as number;
 
-    // Filter by polygon drawing
-    if (polygonPath && window.google?.maps?.geometry?.poly) {
-        const polygon = new window.google.maps.Polygon({ paths: polygonPath });
-        properties = properties.filter(p => 
-            window.google.maps.geometry.poly.containsLocation(
-                new window.google.maps.LatLng(p.lat, p.lng),
-                polygon
-            )
-        );
-    }
+        if (valA < valB) {
+            return direction === 'asc' ? -1 : 1;
+        }
+        if (valA > valB) {
+            return direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+    });
 
-    return properties;
-  }, [allProperties, filters, polygonPath]);
+
+    return sortableProperties;
+  }, [allProperties, filters, sortConfig]);
   
   const uniqueNeighborhoods = useMemo(() => {
       const neighborhoods = new Set(allProperties.map(p => p.neighborhood));
@@ -161,15 +155,13 @@ const App: React.FC = () => {
 
   const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
   
-  const handleSearch = useCallback((location: string) => {
+  const handleSearch = (location: string) => {
     setSearchLocation(location);
-    setPolygonPath(null); // Clear polygon on new search
-    setClearDrawingTrigger(c => c + 1); // Trigger map to clear drawing
-  }, []);
+  };
 
-  const handleClearSearch = useCallback(() => {
+  const handleClearSearch = () => {
       handleSearch('Accra, Ghana');
-  }, [handleSearch]);
+  }
 
   const handleCardClick = (id: string) => {
     setSelectedPropertyId(id);
@@ -179,16 +171,12 @@ const App: React.FC = () => {
       setHoveredPropertyId(id);
   };
 
-  const handleFilterChange = (newFilters: FiltersState) => {
-      setFilters(newFilters);
-  };
-
-  const handlePolygonDrawn = (path: google.maps.LatLng[]) => {
-      setPolygonPath(path);
+  const handleFilterChange = (newFilters: Partial<typeof filters>) => {
+      setFilters(prev => ({ ...prev, ...newFilters}));
   }
-  
-  const handleDrawingCleared = () => {
-      setPolygonPath(null);
+
+  const handleSortChange = (newSortConfig: Partial<SortConfig>) => {
+      setSortConfig(prev => ({ ...prev, ...newSortConfig }));
   }
 
   const handleToggleCompare = (property: Property) => {
@@ -229,14 +217,15 @@ const App: React.FC = () => {
         onClear={handleClearSearch}
       />
       {isMockData && <DemoDataBanner />}
-      <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 overflow-hidden">
-        {/* Left Panel */}
-        <div className="lg:col-span-1 xl:col-span-1 flex flex-col gap-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
             <Filters 
                 onFilterChange={handleFilterChange} 
                 currentFilters={filters}
                 neighborhoods={uniqueNeighborhoods}
                 currencyCode={currencyCode}
+                sortConfig={sortConfig}
+                onSortChange={handleSortChange}
             />
             <PropertyList 
                 properties={filteredProperties}
@@ -248,21 +237,6 @@ const App: React.FC = () => {
                 onToggleCompare={handleToggleCompare}
                 compareList={compareList}
             />
-        </div>
-
-        {/* Right Panel (Map) */}
-        <div className="lg:col-span-2 xl:col-span-3 h-full min-h-[400px] lg:min-h-0">
-          <Suspense fallback={<div className="w-full h-full bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse flex items-center justify-center">Loading Map...</div>}>
-            <Map
-                properties={filteredProperties}
-                selectedPropertyId={hoveredPropertyId || selectedPropertyId}
-                onMarkerClick={handleCardClick}
-                onPolygonDrawn={handlePolygonDrawn}
-                onDrawingCleared={handleDrawingCleared}
-                clearDrawingTrigger={clearDrawingTrigger}
-                userLocation={userLocation}
-            />
-          </Suspense>
         </div>
       </main>
 

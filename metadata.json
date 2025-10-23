@@ -1,7 +1,5 @@
 {
-  "name": "TEST 1",
+  "name": "Domus",
   "description": "",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
+  "requestFramePermissions": []
 }

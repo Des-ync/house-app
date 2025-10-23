@@ -16,10 +16,3 @@ export interface Property {
   neighborhood: string;
   verified: boolean;
 }
-
-export interface FiltersState {
-  maxPrice: number;
-  beds: number;
-  verified: boolean;
-  neighborhoods: string[];
-}

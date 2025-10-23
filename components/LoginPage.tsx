@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Logo from './Logo';
 
 interface LoginPageProps {
   onLogin: (email: string) => void;
@@ -34,10 +35,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
         <div className="text-center">
             <div className="flex justify-center items-center gap-2 mb-4">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v8a1 1 0 001 1h3v-5a1 1 0 011-1h2a1 1 0 011 1v5h3a1 1 0 001-1V8a1 1 0 00-.504-.868l-7-4zM10 18a1 1 0 001-1v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5a1 1 0 001 1h2z" clipRule="evenodd" />
-                </svg>
-                <h1 className="text-3xl font-bold text-slate-800">Gemini Real Estate</h1>
+                <Logo className="h-12 w-auto" />
+                <h1 className="text-3xl font-bold text-slate-800">Domus</h1>
             </div>
           <p className="mt-2 text-sm text-slate-600">
             Sign in to save properties and access your account.

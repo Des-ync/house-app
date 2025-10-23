@@ -1,14 +1,11 @@
 import React from 'react';
-import { SunIcon, MoonIcon } from './icons';
 
 interface SettingsMenuProps {
   onClose: () => void;
   onLogout: () => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
 }
 
-const SettingsMenu: React.FC<SettingsMenuProps> = ({ onClose, onLogout, isDarkMode, onToggleDarkMode }) => {
+const SettingsMenu: React.FC<SettingsMenuProps> = ({ onClose, onLogout }) => {
   return (
     <div 
         className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white dark:bg-slate-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-30"
@@ -16,16 +13,8 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onClose, onLogout, isDarkMo
     >
       <div className="py-1">
         <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-200">
-          <p className="font-semibold">Settings</p>
+          <p className="font-semibold">Account</p>
         </div>
-        <div className="border-t border-slate-200 dark:border-slate-700"></div>
-        <button
-          onClick={onToggleDarkMode}
-          className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-        >
-          {isDarkMode ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-          <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-        </button>
         <div className="border-t border-slate-200 dark:border-slate-700"></div>
         <button
           onClick={() => { onLogout(); onClose(); }}

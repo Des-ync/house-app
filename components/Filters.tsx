@@ -1,14 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { FiltersState } from '../types';
+import { ChevronUpIcon, ChevronDownIcon } from './icons';
+
+type SortConfig = {
+  key: 'price' | 'beds' | 'sqft';
+  direction: 'asc' | 'desc';
+};
 
 interface FiltersProps {
-  onFilterChange: (filters: FiltersState) => void;
-  currentFilters: FiltersState;
+  onFilterChange: (filters: any) => void;
+  currentFilters: {
+    maxPrice: number;
+    beds: number;
+    verified: boolean;
+    neighborhoods: string[];
+  };
   neighborhoods: string[];
   currencyCode: string;
+  sortConfig: SortConfig;
+  onSortChange: (config: Partial<SortConfig>) => void;
 }
 
-const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neighborhoods, currencyCode }) => {
+const Filters: React.FC<FiltersProps> = ({ 
+    onFilterChange, 
+    currentFilters, 
+    neighborhoods, 
+    currencyCode,
+    sortConfig,
+    onSortChange,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +54,14 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
         ? currentFilters.neighborhoods.filter(n => n !== neighborhood)
         : [...currentFilters.neighborhoods, neighborhood];
       onFilterChange({ ...currentFilters, neighborhoods: newNeighborhoods });
+  }
+  
+  const handleSortKeyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onSortChange({ key: e.target.value as SortConfig['key'] });
+  };
+
+  const toggleSortDirection = () => {
+    onSortChange({ direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
   };
 
   useEffect(() => {
@@ -45,14 +72,14 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [dropdownRef]);
 
 
   return (
     <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm mb-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         {/* Price Slider */}
-        <div className="md:col-span-1">
+        <div className="lg:col-span-1">
           <label htmlFor="price-range" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
             Max Price: <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(currentFilters.maxPrice)}</span>
           </label>
@@ -69,7 +96,7 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
         </div>
 
         {/* Beds and Verified */}
-        <div className="md:col-span-1 flex flex-col">
+        <div className="lg:col-span-1 flex flex-col">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Beds & Features</label>
             <div className="flex items-center gap-2">
                  {[1, 2, 3, 4, 5].map(num => (
@@ -90,7 +117,7 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
         </div>
         
         {/* Neighborhood Dropdown */}
-        <div className="md:col-span-1 relative" ref={dropdownRef}>
+        <div className="lg:col-span-1 relative" ref={dropdownRef}>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Neighborhood</label>
             <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 <span className="block truncate">
@@ -114,6 +141,30 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange, currentFilters, neigh
                     ))}
                 </div>
             )}
+        </div>
+        
+        {/* Sort Controls */}
+        <div className="lg:col-span-1">
+            <label htmlFor="sort-by" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Sort By</label>
+            <div className="flex items-center gap-2">
+                <select
+                    id="sort-by"
+                    value={sortConfig.key}
+                    onChange={handleSortKeyChange}
+                    className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                    <option value="price">Price</option>
+                    <option value="beds">Beds</option>
+                    <option value="sqft">Square Feet</option>
+                </select>
+                <button
+                    onClick={toggleSortDirection}
+                    className="flex-shrink-0 p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    title={`Sort ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}`}
+                >
+                    {sortConfig.direction === 'asc' ? <ChevronUpIcon className="h-5 w-5 text-slate-700 dark:text-slate-200" /> : <ChevronDownIcon className="h-5 w-5 text-slate-700 dark:text-slate-200" />}
+                </button>
+            </div>
         </div>
 
       </div>

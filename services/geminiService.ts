@@ -1,10 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Property } from '../types';
 
-const env = import.meta.env as Record<string, string | undefined>;
-const GEMINI_API_KEY = env.VITE_GEMINI_API_KEY ?? env.VITE_API_KEY ?? env.GEMINI_API_KEY;
-
-const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const propertySchema = {
     type: Type.OBJECT,
@@ -41,21 +38,11 @@ interface FindPropertiesResult {
 // In a real application, the Gemini call would be made on the server to protect the API key.
 export const findProperties = async (location: string): Promise<FindPropertiesResult> => {
     try {
-        if (!ai) {
-            console.warn('Gemini API key is not configured. Falling back to mock property data.');
-            return getMockProperties(location);
-        }
-
         const prompt = `Find 15 real estate properties for sale or rent in ${location}. Provide a diverse list including houses, apartments, and condos. For each property, include a unique ID, full address, city, state, neighborhood, latitude, longitude, price in the smallest currency unit (e.g., cents), an ISO 4217 currency code (e.g., GHS for Ghana), number of bedrooms, number of bathrooms, square footage, whether it's for sale or rent, a "verified" status (boolean), a compelling 2-3 sentence description, and a list of at least 8 high-quality image URLs.`;
-
+        
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-pro',
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: prompt }],
-                },
-            ],
+            contents: prompt,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -70,13 +57,8 @@ export const findProperties = async (location: string): Promise<FindPropertiesRe
                 }
             }
         });
-
+        
         const jsonText = response.text;
-        if (!jsonText) {
-            console.error("Gemini response did not contain any text payload");
-            return getMockProperties(location);
-        }
-
         const result = JSON.parse(jsonText);
 
         if (result && result.properties && Array.isArray(result.properties)) {
