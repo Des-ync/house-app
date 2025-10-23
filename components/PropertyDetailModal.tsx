@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Property } from '../types';
-import { VerifiedIcon } from './icons';
+import { VerifiedIcon, WhatsappIcon, EmailIcon, PhoneIcon } from './icons';
 import MortgageCalculator from './MortgageCalculator';
 
 interface PropertyDetailModalProps {
@@ -92,9 +92,38 @@ const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({ property, onC
                         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{property.description}</p>
                     </div>
 
-                    <div className="border-t dark:border-slate-700 pt-4">
-                        <MortgageCalculator priceMinorUnits={property.priceMinorUnits} currencyCode={property.currencyCode} />
-                    </div>
+                    {property.type === 'For Sale' && (
+                      <div className="border-t dark:border-slate-700 pt-4">
+                          <MortgageCalculator priceMinorUnits={property.priceMinorUnits} currencyCode={property.currencyCode} />
+                      </div>
+                    )}
+
+
+                    {property.agentName && (
+                        <div className="border-t dark:border-slate-700 pt-4">
+                            <h3 className="font-semibold text-slate-700 dark:text-slate-300">Contact Agent</h3>
+                            <div className="mt-2 flex items-center justify-between">
+                                <p className="text-slate-800 dark:text-slate-200">{property.agentName}</p>
+                                <div className="flex items-center gap-3">
+                                    {property.agentPhone && (
+                                        <>
+                                            <a href={`tel:${property.agentPhone.replace(/\D/g, '')}`} className="p-2 rounded-full hover:bg-sky-100 dark:hover:bg-sky-900/50 text-sky-600 dark:text-sky-400" title="Call Agent">
+                                                <PhoneIcon className="h-6 w-6" />
+                                            </a>
+                                            <a href={`https://wa.me/${property.agentPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400" title="Contact on WhatsApp">
+                                                <WhatsappIcon className="h-6 w-6" />
+                                            </a>
+                                        </>
+                                    )}
+                                    {property.agentEmail && (
+                                        <a href={`mailto:${property.agentEmail}`} className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400" title="Send Email">
+                                            <EmailIcon className="h-6 w-6" />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

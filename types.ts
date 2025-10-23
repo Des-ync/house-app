@@ -15,4 +15,7 @@ export interface Property {
   imageUrls: string[];
   neighborhood: string;
   verified: boolean;
+  agentName?: string;
+  agentPhone?: string;
+  agentEmail?: string;
 }

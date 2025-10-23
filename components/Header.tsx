@@ -9,12 +9,14 @@ interface HeaderProps {
     isLoading: boolean;
     userEmail: string | null;
     onLogout: () => void;
+    onGoToLogin: () => void;
     isDarkMode: boolean;
     onToggleDarkMode: () => void;
     onClear: () => void;
+    searchHistory: string[];
 }
 
-const Header: React.FC<HeaderProps> = ({ onSearch, isLoading, userEmail, onLogout, isDarkMode, onToggleDarkMode, onClear }) => {
+const Header: React.FC<HeaderProps> = ({ onSearch, isLoading, userEmail, onLogout, onGoToLogin, isDarkMode, onToggleDarkMode, onClear, searchHistory }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     return (
@@ -24,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ onSearch, isLoading, userEmail, onLogou
                 <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 hidden md:block">Domus</h1>
             </div>
             <div className="flex items-center gap-4">
-                <SearchAutocomplete onSearch={onSearch} isLoading={isLoading} onClear={onClear} />
+                <SearchAutocomplete onSearch={onSearch} isLoading={isLoading} onClear={onClear} searchHistory={searchHistory} />
                 {isLoading && <Spinner />}
                 <button
                     onClick={onToggleDarkMode}
@@ -37,21 +39,30 @@ const Header: React.FC<HeaderProps> = ({ onSearch, isLoading, userEmail, onLogou
                         <MoonIcon className="h-6 w-6 text-slate-700" />
                     )}
                 </button>
-                <div className="relative">
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
-                        <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
-                            {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
-                        </div>
+                {userEmail ? (
+                    <div className="relative">
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+                                {userEmail.charAt(0).toUpperCase()}
+                            </div>
+                        </button>
+                        {isMenuOpen && (
+                        <div className="fixed inset-0 z-20" onClick={() => setIsMenuOpen(false)}>
+                                <SettingsMenu 
+                                    onClose={() => setIsMenuOpen(false)}
+                                    onLogout={onLogout}
+                                />
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <button
+                        onClick={onGoToLogin}
+                        className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
+                    >
+                        Sign In
                     </button>
-                    {isMenuOpen && (
-                       <div className="fixed inset-0 z-20" onClick={() => setIsMenuOpen(false)}>
-                            <SettingsMenu 
-                                onClose={() => setIsMenuOpen(false)}
-                                onLogout={onLogout}
-                            />
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         </header>
     );

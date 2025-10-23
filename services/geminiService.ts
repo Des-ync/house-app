@@ -25,6 +25,9 @@ const propertySchema = {
             type: Type.ARRAY,
             items: { type: Type.STRING },
         },
+        agentName: { type: Type.STRING },
+        agentPhone: { type: Type.STRING },
+        agentEmail: { type: Type.STRING },
     },
     required: ['id', 'address', 'city', 'state', 'neighborhood', 'lat', 'lng', 'priceMinorUnits', 'currencyCode', 'beds', 'baths', 'sqft', 'type', 'verified', 'description', 'imageUrls']
 };
@@ -38,7 +41,7 @@ interface FindPropertiesResult {
 // In a real application, the Gemini call would be made on the server to protect the API key.
 export const findProperties = async (location: string): Promise<FindPropertiesResult> => {
     try {
-        const prompt = `Find 15 real estate properties for sale or rent in ${location}. Provide a diverse list including houses, apartments, and condos. For each property, include a unique ID, full address, city, state, neighborhood, latitude, longitude, price in the smallest currency unit (e.g., cents), an ISO 4217 currency code (e.g., GHS for Ghana), number of bedrooms, number of bathrooms, square footage, whether it's for sale or rent, a "verified" status (boolean), a compelling 2-3 sentence description, and a list of at least 8 high-quality image URLs.`;
+        const prompt = `Find 15 real estate properties for sale or rent in ${location}. Provide a diverse list including houses, apartments, and condos. For each property, include a unique ID, full address, city, state, neighborhood, latitude, longitude, price in the smallest currency unit (e.g., cents), an ISO 4217 currency code (e.g., GHS for Ghana), number of bedrooms, number of bathrooms, square footage, whether it's for sale or rent, a "verified" status (boolean), a compelling 2-3 sentence description, a list of at least 8 high-quality image URLs, and if available, the agent's name, WhatsApp-compatible phone number, and email.`;
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-pro',
@@ -92,6 +95,8 @@ const getMockProperties = (location: string): FindPropertiesResult => {
         const beds = 1 + Math.floor(Math.random() * 5);
         const baths = 1 + Math.floor(Math.random() * 3);
         const sqft = 900 + Math.floor(Math.random() * 2800);
+        const hasAgent = Math.random() > 0.3; // 70% chance
+
         return {
             id,
             address: `${123 + i * 7} Main St, Apt ${i + 1}`,
@@ -109,6 +114,9 @@ const getMockProperties = (location: string): FindPropertiesResult => {
             verified: Math.random() > 0.5,
             description: `A beautiful ${beds} bedroom, ${baths} bathroom property in the ${neighborhoods[i % neighborhoods.length]} neighborhood. Features a modern kitchen and spacious living areas. Perfect for families or professionals.`,
             imageUrls: Array.from({ length: 8 }, (_, j) => `https://picsum.photos/seed/${id}_${j + 1}/800/600`),
+            agentName: hasAgent ? `Agent #${i + 1}` : undefined,
+            agentPhone: hasAgent ? (isGhana ? '233244123456' : '14155552671') : undefined,
+            agentEmail: hasAgent ? `agent${i + 1}@domus.co` : undefined,
         };
     });
 

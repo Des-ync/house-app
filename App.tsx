@@ -19,6 +19,7 @@ import type { Property } from './types';
 
 const PropertyDetailModal = React.lazy(() => import('./components/PropertyDetailModal'));
 const ComparisonView = React.lazy(() => import('./components/ComparisonView'));
+const LoginPromptModal = React.lazy(() => import('./components/LoginPromptModal'));
 
 type SortConfig = {
   key: 'price' | 'beds' | 'sqft';
@@ -29,6 +30,8 @@ type SortConfig = {
 const App: React.FC = () => {
   // Authentication State
   const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('userEmail'));
+  const [isGuest, setIsGuest] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // UI State
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -44,11 +47,21 @@ const App: React.FC = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [searchLocation, setSearchLocation] = useState('Accra, Ghana');
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try {
+      const savedHistory = localStorage.getItem('searchHistory');
+      return savedHistory ? JSON.parse(savedHistory) : [];
+    } catch {
+      return [];
+    }
+  });
   
   // Filters State
   const [filters, setFilters] = useState({
     maxPrice: 1000000,
     beds: 0,
+    baths: 0,
+    type: 'Any' as 'Any' | 'For Sale' | 'For Rent',
     verified: false,
     neighborhoods: [] as string[],
   });
@@ -99,6 +112,16 @@ const App: React.FC = () => {
     if (filters.beds > 0) {
       properties = properties.filter(p => p.beds >= filters.beds);
     }
+    
+    // Filter by baths
+    if (filters.baths > 0) {
+        properties = properties.filter(p => p.baths >= filters.baths);
+    }
+    
+    // Filter by type
+    if (filters.type !== 'Any') {
+        properties = properties.filter(p => p.type === filters.type);
+    }
 
     // Filter by verified status
     if (filters.verified) {
@@ -146,17 +169,34 @@ const App: React.FC = () => {
   const handleLogin = (email: string) => {
     setUserEmail(email);
     localStorage.setItem('userEmail', email);
+    setIsGuest(false);
+  };
+  
+  const handleGuestLogin = () => {
+    setIsGuest(true);
   };
 
   const handleLogout = () => {
     setUserEmail(null);
     localStorage.removeItem('userEmail');
+    setIsGuest(false);
+  };
+  
+  const handleGoToLogin = () => {
+    setIsGuest(false);
+    setShowLoginPrompt(false);
   };
 
   const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
   
   const handleSearch = (location: string) => {
     setSearchLocation(location);
+    // Update search history
+    setSearchHistory(prevHistory => {
+        const newHistory = [location, ...prevHistory.filter(item => item.toLowerCase() !== location.toLowerCase())].slice(0, 5);
+        localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+        return newHistory;
+    });
   };
 
   const handleClearSearch = () => {
@@ -164,7 +204,11 @@ const App: React.FC = () => {
   }
 
   const handleCardClick = (id: string) => {
-    setSelectedPropertyId(id);
+    if (isGuest) {
+        setShowLoginPrompt(true);
+    } else {
+        setSelectedPropertyId(id);
+    }
   };
   
   const handleMarkerHover = (id: string | null) => {
@@ -201,8 +245,8 @@ const App: React.FC = () => {
 
 
   // Render logic
-  if (!userEmail) {
-    return <LoginPage onLogin={handleLogin} />;
+  if (!userEmail && !isGuest) {
+    return <LoginPage onLogin={handleLogin} onGuestLogin={handleGuestLogin} />;
   }
 
   return (
@@ -212,9 +256,11 @@ const App: React.FC = () => {
         isLoading={isLoading}
         userEmail={userEmail}
         onLogout={handleLogout}
+        onGoToLogin={handleGoToLogin}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onClear={handleClearSearch}
+        searchHistory={searchHistory}
       />
       {isMockData && <DemoDataBanner />}
       <main className="flex-grow p-4 overflow-y-auto">
@@ -243,6 +289,7 @@ const App: React.FC = () => {
       {/* Modals and Overlays */}
       <Suspense fallback={<div />}>
         {selectedProperty && <PropertyDetailModal property={selectedProperty} onClose={() => setSelectedPropertyId(null)} />}
+        {showLoginPrompt && <LoginPromptModal onClose={() => setShowLoginPrompt(false)} onLogin={handleGoToLogin} />}
       </Suspense>
       
       <ComparisonTray 
