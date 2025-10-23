@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronUpIcon, ChevronDownIcon, FilterIcon } from './icons';
+import { formatMoney } from '../utils/currency';
+import Tooltip from './Tooltip';
 
 type SortConfig = {
   key: 'price' | 'beds' | 'sqft';
@@ -20,6 +22,8 @@ interface FiltersProps {
   currencyCode: string;
   sortConfig: SortConfig;
   onSortChange: (config: Partial<SortConfig>) => void;
+  onClearFilters: () => void;
+  activeFilterCount: number;
 }
 
 const Filters: React.FC<FiltersProps> = ({ 
@@ -29,16 +33,12 @@ const Filters: React.FC<FiltersProps> = ({
     currencyCode,
     sortConfig,
     onSortChange,
+    onClearFilters,
+    activeFilterCount
 }) => {
   const [isNeighborhoodOpen, setIsNeighborhoodOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const formatCurrency = (value: number) => new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-  }).format(value);
   
   const handleSortKeyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onSortChange({ key: e.target.value as SortConfig['key'] });
@@ -65,40 +65,38 @@ const Filters: React.FC<FiltersProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownRef]);
 
-  const activeFilterCount = useMemo(() => {
-    const { maxPrice, beds, baths, type, verified, neighborhoods } = currentFilters;
-    let count = 0;
-    if (maxPrice < 1000000) count++;
-    if (beds > 0) count++;
-    if (baths > 0) count++;
-    if (type !== 'Any') count++;
-    if (verified) count++;
-    if (neighborhoods.length > 0) count++;
-    return count;
-  }, [currentFilters]);
-
 
   return (
     <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm mb-4">
-       <button 
-        onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-        className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-      >
-        <FilterIcon />
-        <span>Filters</span>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+          className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <FilterIcon />
+          <span>Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="ml-1 bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
         {activeFilterCount > 0 && (
-          <span className="ml-1 bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-            {activeFilterCount}
-          </span>
+          <button 
+            onClick={onClearFilters} 
+            className="px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          >
+            Clear
+          </button>
         )}
-      </button>
+      </div>
 
       {isFiltersOpen && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end mt-4 border-t border-slate-200 dark:border-slate-700 pt-4">
             {/* Price Slider */}
             <div>
             <label htmlFor="price-range" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Max Price: <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(currentFilters.maxPrice)}</span>
+                Max Price: <span className="font-bold text-blue-600 dark:text-blue-400">{formatMoney(currentFilters.maxPrice * 100, currencyCode)}</span>
             </label>
             <input
                 id="price-range"
@@ -199,13 +197,16 @@ const Filters: React.FC<FiltersProps> = ({
                         <option value="beds">Beds</option>
                         <option value="sqft">Square Feet</option>
                     </select>
-                    <button
-                        onClick={toggleSortDirection}
-                        className="flex-shrink-0 p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        title={`Sort ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}`}
-                    >
-                        {sortConfig.direction === 'asc' ? <ChevronUpIcon className="h-5 w-5 text-slate-700 dark:text-slate-200" /> : <ChevronDownIcon className="h-5 w-5 text-slate-700 dark:text-slate-200" />}
-                    </button>
+                    <div className="relative group">
+                        <button
+                            onClick={toggleSortDirection}
+                            className="flex-shrink-0 p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            aria-label={`Sort ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}`}
+                        >
+                            {sortConfig.direction === 'asc' ? <ChevronUpIcon className="h-5 w-5 text-slate-700 dark:text-slate-200" /> : <ChevronDownIcon className="h-5 w-5 text-slate-700 dark:text-slate-200" />}
+                        </button>
+                        <Tooltip text={`Sort ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}`} />
+                    </div>
                 </div>
             </div>
         </div>

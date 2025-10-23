@@ -12,6 +12,10 @@ interface PropertyListProps {
   error: string | null;
   onToggleCompare: (property: Property) => void;
   compareList: Property[];
+  onClearFilters: () => void;
+  activeFilterCount: number;
+  savedProperties: string[];
+  onToggleSave: (id: string) => void;
 }
 
 const PropertyList: React.FC<PropertyListProps> = ({
@@ -22,7 +26,11 @@ const PropertyList: React.FC<PropertyListProps> = ({
   isLoading,
   error,
   onToggleCompare,
-  compareList
+  compareList,
+  onClearFilters,
+  activeFilterCount,
+  savedProperties,
+  onToggleSave
 }) => {
   if (isLoading) {
     return (
@@ -39,7 +47,21 @@ const PropertyList: React.FC<PropertyListProps> = ({
   }
   
   if (properties.length === 0) {
-      return <div className="text-center p-8 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg mt-4">No properties found. Try a different search or adjust your filters.</div>
+      return (
+        <div className="text-center p-8 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg mt-4">
+            <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-200">No Properties Found</h3>
+            <p className="mt-2">We couldn't find any properties matching your current search and filter criteria.</p>
+            <p>Try searching in a different area or adjusting your filters.</p>
+            {activeFilterCount > 0 && (
+                <button 
+                    onClick={onClearFilters}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
+                >
+                    Clear Filters ({activeFilterCount})
+                </button>
+            )}
+        </div>
+      );
   }
 
   return (
@@ -54,6 +76,8 @@ const PropertyList: React.FC<PropertyListProps> = ({
           onMouseLeave={() => onMarkerHover(null)}
           onToggleCompare={onToggleCompare}
           isInCompare={!!compareList.find(p => p.id === property.id)}
+          onToggleSave={onToggleSave}
+          isSaved={savedProperties.includes(property.id)}
         />
       ))}
     </div>

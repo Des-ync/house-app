@@ -68,3 +68,72 @@ export const FilterIcon: React.FC<{ className?: string }> = ({ className = "h-5 
         <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-4.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
     </svg>
 );
+
+export const GoogleIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg className={className} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.651-3.474-11.303-8l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.01,35.638,44,30.138,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+    </svg>
+);
+
+export const SearchIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+);
+
+export const XIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+export const MapIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13v-6m0-6V4a1 1 0 011.447-.894L15 6m0 12v-6m0-6V5.618a1 1 0 00-1.447-.894L9 7m6 12l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 9m-6-2l6-3m-6 12l6-3" />
+    </svg>
+);
+
+export const ListIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+);
+
+export const HeartIcon: React.FC<{ className?: string, isFilled?: boolean }> = ({ className = "h-5 w-5", isFilled }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill={isFilled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={isFilled ? 0 : 2}>
+        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+    </svg>
+);
+
+export const BookmarkIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+);
+
+export const UserIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+    </svg>
+);
+
+export const LockClosedIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+    </svg>
+);
+
+export const BugIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c1.355 0 2.707-.157 4-.447M12 21c-1.355 0-2.707-.157-4-.447m8.716-6.747a9.004 9.004 0 00-17.432 0m17.432 0l-1.528-3.055M3.284 14.253l-1.528-3.055m1.528 3.055L6 12m12 2.25l-2.716-5.432M6 12L3.284 6.568M12 3c-1.355 0-2.707.157-4 .447m8 .001c-1.293-.29-2.645-.447-4-.447m-4 0A9.004 9.004 0 003.284 6.568M12 3a9.004 9.004 0 018.716 3.568m0 0l-1.528 3.055M12 12V3m0 9l-3 3m3-3l3 3" />
+    </svg>
+);
+
+export const TrashIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
+    </svg>
+);

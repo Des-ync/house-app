@@ -14,7 +14,7 @@ const ComparisonTray: React.FC<ComparisonTrayProps> = ({ properties, onRemove, o
   }
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-2xl z-20 p-4 transform transition-all duration-300">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-2xl z-30 p-4 transform transition-all duration-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-grow">
           <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 hidden sm:block">Compare ({properties.length}/3)</h3>

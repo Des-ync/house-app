@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { SearchIcon, XIcon } from './icons';
 
 interface SearchAutocompleteProps {
   onSearch: (location: string) => void;
@@ -52,22 +53,24 @@ const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({ onSearch, isLoa
               onFocus={() => setIsHistoryVisible(true)}
               disabled={isLoading}
               placeholder="Enter a city or address"
-              className="px-4 py-2 w-48 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="px-4 py-2 w-32 sm:w-48 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           />
         <button
           type="submit"
           disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+          className="px-2 sm:px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
         >
-          Search
+          <SearchIcon className="h-5 w-5 sm:hidden" />
+          <span className="hidden sm:inline">Search</span>
         </button>
         <button
           type="button"
           onClick={handleClear}
           disabled={isLoading}
-          className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+          className="px-2 sm:px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
         >
-          Clear
+          <XIcon className="h-5 w-5 sm:hidden" />
+          <span className="hidden sm:inline">Clear</span>
         </button>
       </form>
       {isHistoryVisible && searchHistory.length > 0 && (

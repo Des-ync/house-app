@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Property } from '../types';
+import { formatMoney } from '../utils/currency';
 
 interface ComparisonViewProps {
   properties: Property[];
@@ -12,12 +13,6 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ properties, onClose, on
     return null;
   }
   
-  const formatCurrency = (value: number, currencyCode: string) => new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-  }).format(value);
-
   const features = ['price', 'beds', 'baths', 'sqft', 'type', 'description'];
   const featureLabels: { [key: string]: string } = {
     price: 'Price',
@@ -29,7 +24,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ properties, onClose, on
   };
 
   const renderFeature = (property: Property, feature: string) => {
-    if (feature === 'price') return formatCurrency(property.priceMinorUnits / 100, property.currencyCode);
+    if (feature === 'price') return formatMoney(property.priceMinorUnits, property.currencyCode);
     if (feature === 'sqft') return (property.sqft as number).toLocaleString();
     if (feature === 'description') return <p className="text-sm text-left">{property.description}</p>;
     return property[feature as keyof Property];
@@ -45,7 +40,8 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ properties, onClose, on
           </button>
         </div>
         
-        <div className="grid" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${properties.length}, minmax(200px, 2fr))`}}>
+        {/* Desktop Grid View */}
+        <div className="hidden md:grid" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${properties.length}, minmax(200px, 2fr))`}}>
           {/* Empty corner cell */}
           <div className="p-4 border-b border-r dark:border-slate-700 font-semibold sticky top-[77px] bg-white dark:bg-slate-800"></div>
           
@@ -76,6 +72,40 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ properties, onClose, on
               ))}
             </React.Fragment>
           ))}
+        </div>
+
+        {/* Mobile List View */}
+        <div className="block md:hidden p-4 space-y-4">
+            {/* Property headers */}
+            <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${properties.length}, 1fr)` }}>
+                {properties.map(p => (
+                    <div key={p.id} className="text-center relative">
+                        <img src={p.imageUrls[0]} alt={p.address} className="w-full h-24 object-cover rounded-md mb-2"/>
+                        <p className="font-semibold text-xs text-slate-700 dark:text-slate-200 truncate">{p.address}</p>
+                        <button
+                          onClick={() => onRemove(p.id)}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                          title="Remove"
+                        >
+                          &times;
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {/* Feature rows */}
+            {features.map(feature => (
+                <div key={feature} className="pt-4 border-t dark:border-slate-700">
+                    <h4 className="font-semibold text-slate-600 dark:text-slate-300 mb-2">{featureLabels[feature]}</h4>
+                    <div className="grid gap-4 items-start" style={{ gridTemplateColumns: `repeat(${properties.length}, 1fr)` }}>
+                        {properties.map(p => (
+                            <div key={`${p.id}-${feature}`} className={`text-sm text-slate-800 dark:text-slate-200 ${feature === 'description' ? 'text-left' : 'text-center'}`}>
+                                {renderFeature(p, feature)}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
         </div>
       </div>
     </div>

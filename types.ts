@@ -1,3 +1,8 @@
+export interface User {
+  email: string;
+  name?: string;
+}
+
 export interface Property {
   id: string;
   address: string;

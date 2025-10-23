@@ -1,22 +1,39 @@
 import React, { useState } from 'react';
 import SearchAutocomplete from './SearchAutocomplete';
 import SettingsMenu from './SettingsMenu';
-import { Spinner, SunIcon, MoonIcon } from './icons';
+import { Spinner } from './icons';
 import Logo from './Logo';
+import type { User } from '../types';
 
 interface HeaderProps {
     onSearch: (location: string) => void;
     isLoading: boolean;
-    userEmail: string | null;
+    user: User | null;
     onLogout: () => void;
     onGoToLogin: () => void;
     isDarkMode: boolean;
-    onToggleDarkMode: () => void;
     onClear: () => void;
     searchHistory: string[];
+    onShowSavedProperties: () => void;
+    onShowEditProfile: () => void;
+    onShowChangePassword: () => void;
+    onShowDeleteAccount: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSearch, isLoading, userEmail, onLogout, onGoToLogin, isDarkMode, onToggleDarkMode, onClear, searchHistory }) => {
+const Header: React.FC<HeaderProps> = ({ 
+    onSearch, 
+    isLoading, 
+    user, 
+    onLogout, 
+    onGoToLogin, 
+    isDarkMode, 
+    onClear, 
+    searchHistory, 
+    onShowSavedProperties,
+    onShowEditProfile,
+    onShowChangePassword,
+    onShowDeleteAccount
+}) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     return (
@@ -28,29 +45,23 @@ const Header: React.FC<HeaderProps> = ({ onSearch, isLoading, userEmail, onLogou
             <div className="flex items-center gap-4">
                 <SearchAutocomplete onSearch={onSearch} isLoading={isLoading} onClear={onClear} searchHistory={searchHistory} />
                 {isLoading && <Spinner />}
-                <button
-                    onClick={onToggleDarkMode}
-                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                    title="Toggle dark mode"
-                >
-                    {isDarkMode ? (
-                        <SunIcon className="h-6 w-6 text-yellow-400" />
-                    ) : (
-                        <MoonIcon className="h-6 w-6 text-slate-700" />
-                    )}
-                </button>
-                {userEmail ? (
+                {user ? (
                     <div className="relative">
-                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Open user menu">
                             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
-                                {userEmail.charAt(0).toUpperCase()}
+                                {(user.name || user.email).charAt(0).toUpperCase()}
                             </div>
                         </button>
                         {isMenuOpen && (
+                        // Fix: Corrected typo 'setIsMenuОpen' to 'setIsMenuOpen'.
                         <div className="fixed inset-0 z-20" onClick={() => setIsMenuOpen(false)}>
                                 <SettingsMenu 
                                     onClose={() => setIsMenuOpen(false)}
                                     onLogout={onLogout}
+                                    onShowSavedProperties={onShowSavedProperties}
+                                    onShowEditProfile={onShowEditProfile}
+                                    onShowChangePassword={onShowChangePassword}
+                                    onShowDeleteAccount={onShowDeleteAccount}
                                 />
                             </div>
                         )}

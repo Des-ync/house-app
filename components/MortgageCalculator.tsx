@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatMoney } from '../utils/currency';
 
 interface MortgageCalculatorProps {
   priceMinorUnits: number;
@@ -11,12 +12,6 @@ const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ priceMinorUnits
   const [interestRate, setInterestRate] = useState(6.5);
   const [loanTerm, setLoanTerm] = useState(30);
   
-  const formatCurrency = (value: number) => new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-  }).format(value);
-
   const downPaymentPercentage = price > 0 ? (downPayment / price) * 100 : 0;
 
   const monthlyPayment = useMemo(() => {
@@ -38,7 +33,7 @@ const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ priceMinorUnits
     <div className="space-y-4">
       <div className="flex justify-between items-baseline">
         <h3 className="font-semibold text-slate-700 dark:text-slate-300">Payment Estimate</h3>
-        <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{formatCurrency(monthlyPayment)}<span className="text-base font-normal text-slate-500 dark:text-slate-400">/mo</span></p>
+        <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{formatMoney(monthlyPayment * 100, currencyCode)}<span className="text-base font-normal text-slate-500 dark:text-slate-400">/mo</span></p>
       </div>
 
       <div className="space-y-3 text-sm">
@@ -46,7 +41,7 @@ const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ priceMinorUnits
         <div>
           <div className="flex justify-between">
             <label htmlFor="down-payment" className="font-medium text-slate-600 dark:text-slate-400">Down Payment</label>
-            <span className="text-slate-800 dark:text-slate-200 font-semibold">{formatCurrency(downPayment)} ({downPaymentPercentage.toFixed(0)}%)</span>
+            <span className="text-slate-800 dark:text-slate-200 font-semibold">{formatMoney(downPayment * 100, currencyCode)} ({downPaymentPercentage.toFixed(0)}%)</span>
           </div>
           <input
             id="down-payment"

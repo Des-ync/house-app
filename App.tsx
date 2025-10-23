@@ -13,34 +13,70 @@ import Filters from './components/Filters';
 import LoginPage from './components/LoginPage';
 import ComparisonTray from './components/ComparisonTray';
 import DemoDataBanner from './components/DemoDataBanner';
+import Map from './components/Map';
+import { Spinner, MapIcon, ListIcon } from './components/icons';
 
 import { findProperties } from './services/geminiService';
-import type { Property } from './types';
+import type { Property, User } from './types';
 
 const PropertyDetailModal = React.lazy(() => import('./components/PropertyDetailModal'));
 const ComparisonView = React.lazy(() => import('./components/ComparisonView'));
 const LoginPromptModal = React.lazy(() => import('./components/LoginPromptModal'));
+const SavedPropertiesModal = React.lazy(() => import('./components/SavedPropertiesModal'));
+const EditProfileModal = React.lazy(() => import('./components/EditProfileModal'));
+const ChangePasswordModal = React.lazy(() => import('./components/ChangePasswordModal'));
+const DeleteAccountModal = React.lazy(() => import('./components/DeleteAccountModal'));
+
 
 type SortConfig = {
   key: 'price' | 'beds' | 'sqft';
   direction: 'asc' | 'desc';
 };
 
+const initialFilters = {
+  maxPrice: 1000000,
+  beds: 0,
+  baths: 0,
+  type: 'Any' as 'Any' | 'For Sale' | 'For Rent',
+  verified: false,
+  neighborhoods: [] as string[],
+};
 
 const App: React.FC = () => {
   // Authentication State
-  const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('userEmail'));
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+        try {
+            return JSON.parse(savedUser);
+        } catch {
+            localStorage.removeItem('user');
+            return null;
+        }
+    }
+    // Migration for old userEmail
+    const savedEmail = localStorage.getItem('userEmail');
+    if (savedEmail) {
+        const newUser = { email: savedEmail };
+        localStorage.setItem('user', JSON.stringify(newUser));
+        localStorage.removeItem('userEmail');
+        return newUser;
+    }
+    return null;
+  });
   const [isGuest, setIsGuest] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // UI State
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    return savedMode ? JSON.parse(savedMode) : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+  const [isDarkMode] = useState(true); // Dark mode is now permanently enabled
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMockData, setIsMockData] = useState(false);
+  const [mapsApiLoaded, setMapsApiLoaded] = useState(false);
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
+  const [isEditProfileVisible, setIsEditProfileVisible] = useState(false);
+  const [isChangePasswordVisible, setIsChangePasswordVisible] = useState(false);
+  const [isDeleteAccountVisible, setIsDeleteAccountVisible] = useState(false);
 
   // Data State
   const [allProperties, setAllProperties] = useState<Property[]>([]);
@@ -57,28 +93,64 @@ const App: React.FC = () => {
   });
   
   // Filters State
-  const [filters, setFilters] = useState({
-    maxPrice: 1000000,
-    beds: 0,
-    baths: 0,
-    type: 'Any' as 'Any' | 'For Sale' | 'For Rent',
-    verified: false,
-    neighborhoods: [] as string[],
-  });
+  const [filters, setFilters] = useState(initialFilters);
   
   // Sorting State
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'price', direction: 'asc' });
 
+  // Map State
+  const [polygonPath, setPolygonPath] = useState<any[] | null>(null);
+  const [clearDrawingTrigger, setClearDrawingTrigger] = useState(0);
 
   // Comparison State
   const [compareList, setCompareList] = useState<Property[]>([]);
   const [isComparisonViewVisible, setIsComparisonViewVisible] = useState(false);
 
+  // Saved Properties State
+  const [savedProperties, setSavedProperties] = useState<string[]>([]);
+  const [isSavedPropertiesVisible, setIsSavedPropertiesVisible] = useState(false);
+
   // Effects
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
+    document.documentElement.classList.add('dark');
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        const saved = localStorage.getItem(`saved_properties_${user.email}`);
+        setSavedProperties(saved ? JSON.parse(saved) : []);
+      } catch {
+        setSavedProperties([]);
+      }
+    } else {
+      setSavedProperties([]);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+        if(window.google?.maps) {
+            setMapsApiLoaded(true);
+        }
+        return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.API_KEY}&libraries=drawing,marker,places,geometry`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      setMapsApiLoaded(true);
+    };
+    script.onerror = () => {
+      console.error("Google Maps script failed to load.");
+      setError("Could not load Google Maps. Please check your API key and network connection.")
+    };
+    document.head.appendChild(script);
+}, []);
+
 
   const fetchAndSetProperties = useCallback(async (location: string) => {
     setIsLoading(true);
@@ -132,6 +204,15 @@ const App: React.FC = () => {
     if (filters.neighborhoods.length > 0) {
         properties = properties.filter(p => filters.neighborhoods.includes(p.neighborhood));
     }
+
+    // Filter by drawn polygon on map
+    if (polygonPath && polygonPath.length > 2 && window.google?.maps?.geometry?.poly?.containsLocation) {
+        const polygon = new window.google.maps.Polygon({ paths: polygonPath });
+        properties = properties.filter(p => {
+            const point = new window.google.maps.LatLng(p.lat, p.lng);
+            return window.google.maps.geometry.poly.containsLocation(point, polygon);
+        });
+    }
     
     // Sort the filtered properties
     const sortableProperties = [...properties];
@@ -153,7 +234,7 @@ const App: React.FC = () => {
 
 
     return sortableProperties;
-  }, [allProperties, filters, sortConfig]);
+  }, [allProperties, filters, sortConfig, polygonPath]);
   
   const uniqueNeighborhoods = useMemo(() => {
       const neighborhoods = new Set(allProperties.map(p => p.neighborhood));
@@ -164,11 +245,25 @@ const App: React.FC = () => {
       return allProperties.length > 0 ? allProperties[0].currencyCode : 'USD';
   }, [allProperties]);
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.maxPrice < initialFilters.maxPrice) count++;
+    if (filters.beds > initialFilters.beds) count++;
+    if (filters.baths > initialFilters.baths) count++;
+    if (filters.type !== initialFilters.type) count++;
+    if (filters.verified !== initialFilters.verified) count++;
+    if (filters.neighborhoods.length > 0) count++;
+    return count;
+  }, [filters]);
+
+  const savedPropertyObjects = useMemo(() => {
+      return allProperties.filter(p => savedProperties.includes(p.id));
+  }, [savedProperties, allProperties]);
 
   // Handlers
-  const handleLogin = (email: string) => {
-    setUserEmail(email);
-    localStorage.setItem('userEmail', email);
+  const handleLogin = (newUser: User) => {
+    setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
     setIsGuest(false);
   };
   
@@ -177,8 +272,8 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setUserEmail(null);
-    localStorage.removeItem('userEmail');
+    setUser(null);
+    localStorage.removeItem('user');
     setIsGuest(false);
   };
   
@@ -187,10 +282,10 @@ const App: React.FC = () => {
     setShowLoginPrompt(false);
   };
 
-  const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
-  
   const handleSearch = (location: string) => {
     setSearchLocation(location);
+    setPolygonPath(null);
+    setClearDrawingTrigger(c => c + 1);
     // Update search history
     setSearchHistory(prevHistory => {
         const newHistory = [location, ...prevHistory.filter(item => item.toLowerCase() !== location.toLowerCase())].slice(0, 5);
@@ -204,7 +299,7 @@ const App: React.FC = () => {
   }
 
   const handleCardClick = (id: string) => {
-    if (isGuest) {
+    if (isGuest || !user) {
         setShowLoginPrompt(true);
     } else {
         setSelectedPropertyId(id);
@@ -218,10 +313,23 @@ const App: React.FC = () => {
   const handleFilterChange = (newFilters: Partial<typeof filters>) => {
       setFilters(prev => ({ ...prev, ...newFilters}));
   }
+  
+  const handleClearFilters = () => {
+    setFilters(initialFilters);
+  };
 
   const handleSortChange = (newSortConfig: Partial<SortConfig>) => {
       setSortConfig(prev => ({ ...prev, ...newSortConfig }));
   }
+  
+  const handlePolygonDrawn = (path: any[]) => {
+      setPolygonPath(path);
+  };
+
+  const handleDrawingCleared = () => {
+      setPolygonPath(null);
+  };
+
 
   const handleToggleCompare = (property: Property) => {
     setCompareList(prev => {
@@ -239,57 +347,163 @@ const App: React.FC = () => {
 
   const handleClearCompare = () => setCompareList([]);
 
+  const handleToggleSave = (propertyId: string) => {
+    if (!user) {
+        setShowLoginPrompt(true);
+        return;
+    }
+    const newSavedProperties = savedProperties.includes(propertyId)
+        ? savedProperties.filter(id => id !== propertyId)
+        : [...savedProperties, propertyId];
+    
+    setSavedProperties(newSavedProperties);
+    try {
+        localStorage.setItem(`saved_properties_${user.email}`, JSON.stringify(newSavedProperties));
+    } catch (e) {
+        console.error("Failed to save properties to local storage:", e);
+    }
+  };
+  
+  const handleSaveProfile = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const handleDeleteAccount = () => {
+      if (user) {
+          localStorage.removeItem(`saved_properties_${user.email}`);
+      }
+      handleLogout();
+      setIsDeleteAccountVisible(false);
+  };
+
   const selectedProperty = useMemo(() => {
     return allProperties.find(p => p.id === selectedPropertyId) || null;
   }, [selectedPropertyId, allProperties]);
 
 
   // Render logic
-  if (!userEmail && !isGuest) {
-    return <LoginPage onLogin={handleLogin} onGuestLogin={handleGuestLogin} />;
+  if (!user && !isGuest) {
+    return <LoginPage onLogin={handleLogin} onGuestLogin={handleGuestLogin} isDarkMode={isDarkMode} />;
   }
 
   return (
-    <div className={`flex flex-col h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-300`}>
+    <div className="flex flex-col h-screen bg-slate-900 text-slate-50">
       <Header 
         onSearch={handleSearch} 
         isLoading={isLoading}
-        userEmail={userEmail}
+        user={user}
         onLogout={handleLogout}
         onGoToLogin={handleGoToLogin}
         isDarkMode={isDarkMode}
-        onToggleDarkMode={handleToggleDarkMode}
         onClear={handleClearSearch}
         searchHistory={searchHistory}
+        onShowSavedProperties={() => setIsSavedPropertiesVisible(true)}
+        onShowEditProfile={() => setIsEditProfileVisible(true)}
+        onShowChangePassword={() => setIsChangePasswordVisible(true)}
+        onShowDeleteAccount={() => setIsDeleteAccountVisible(true)}
       />
       {isMockData && <DemoDataBanner />}
-      <main className="flex-grow p-4 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-            <Filters 
-                onFilterChange={handleFilterChange} 
-                currentFilters={filters}
-                neighborhoods={uniqueNeighborhoods}
-                currencyCode={currencyCode}
-                sortConfig={sortConfig}
-                onSortChange={handleSortChange}
-            />
-            <PropertyList 
-                properties={filteredProperties}
-                selectedPropertyId={hoveredPropertyId || selectedPropertyId}
-                onCardClick={handleCardClick}
-                onMarkerHover={handleMarkerHover}
-                isLoading={isLoading}
-                error={error}
-                onToggleCompare={handleToggleCompare}
-                compareList={compareList}
-            />
+      <main className="flex-grow grid grid-cols-1 lg:grid-cols-5 overflow-hidden">
+        {/* List View Container */}
+        <div className={`lg:col-span-3 h-full ${mobileView === 'map' ? 'hidden' : 'block'} lg:block`}>
+            <div className="h-full overflow-y-auto p-2 sm:p-4">
+                <div className="max-w-4xl mx-auto">
+                    <Filters 
+                        onFilterChange={handleFilterChange} 
+                        currentFilters={filters}
+                        neighborhoods={uniqueNeighborhoods}
+                        currencyCode={currencyCode}
+                        sortConfig={sortConfig}
+                        onSortChange={handleSortChange}
+                        onClearFilters={handleClearFilters}
+                        activeFilterCount={activeFilterCount}
+                    />
+                    <PropertyList 
+                        properties={filteredProperties}
+                        selectedPropertyId={hoveredPropertyId || selectedPropertyId}
+                        onCardClick={handleCardClick}
+                        onMarkerHover={handleMarkerHover}
+                        isLoading={isLoading}
+                        error={error}
+                        onToggleCompare={handleToggleCompare}
+                        compareList={compareList}
+                        onClearFilters={handleClearFilters}
+                        activeFilterCount={activeFilterCount}
+                        savedProperties={savedProperties}
+                        onToggleSave={handleToggleSave}
+                    />
+                </div>
+            </div>
+        </div>
+        
+        {/* Map View Container */}
+        <div className={`lg:col-span-2 h-full p-0 lg:p-4 lg:pl-0 ${mobileView === 'list' ? 'hidden' : 'block'} lg:block`}>
+            <div className="h-full w-full rounded-none lg:rounded-lg shadow-inner overflow-hidden bg-slate-200 dark:bg-slate-700">
+                {mapsApiLoaded ? (
+                  <Map 
+                    properties={filteredProperties}
+                    selectedPropertyId={hoveredPropertyId || selectedPropertyId}
+                    onMarkerClick={handleCardClick}
+                    onPolygonDrawn={handlePolygonDrawn}
+                    onDrawingCleared={handleDrawingCleared}
+                    clearDrawingTrigger={clearDrawingTrigger}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-400">
+                    <Spinner />
+                    <span className="ml-2">Loading Map...</span>
+                  </div>
+                )}
+            </div>
         </div>
       </main>
 
+      {/* FAB for mobile view toggle */}
+      <div className="lg:hidden fixed bottom-24 right-4 z-20">
+        <button
+          onClick={() => setMobileView(prev => prev === 'list' ? 'map' : 'list')}
+          className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all"
+          aria-label={mobileView === 'list' ? 'Switch to map view' : 'Switch to list view'}
+        >
+          {mobileView === 'list' ? <MapIcon className="h-6 w-6" /> : <ListIcon className="h-6 w-6" />}
+        </button>
+      </div>
+
       {/* Modals and Overlays */}
       <Suspense fallback={<div />}>
-        {selectedProperty && <PropertyDetailModal property={selectedProperty} onClose={() => setSelectedPropertyId(null)} />}
+        {selectedProperty && <PropertyDetailModal property={selectedProperty} onClose={() => setSelectedPropertyId(null)} isSaved={savedProperties.includes(selectedProperty.id)} onToggleSave={handleToggleSave} />}
         {showLoginPrompt && <LoginPromptModal onClose={() => setShowLoginPrompt(false)} onLogin={handleGoToLogin} />}
+        {isSavedPropertiesVisible && (
+            <SavedPropertiesModal 
+                properties={savedPropertyObjects}
+                onClose={() => setIsSavedPropertiesVisible(false)}
+                onCardClick={(id) => {
+                    setIsSavedPropertiesVisible(false);
+                    handleCardClick(id);
+                }}
+                onToggleCompare={handleToggleCompare}
+                compareList={compareList}
+                savedProperties={savedProperties}
+                onToggleSave={handleToggleSave}
+            />
+        )}
+        {isEditProfileVisible && user && (
+            <EditProfileModal 
+                user={user}
+                onClose={() => setIsEditProfileVisible(false)}
+                onSave={handleSaveProfile}
+            />
+        )}
+        {isChangePasswordVisible && (
+            <ChangePasswordModal onClose={() => setIsChangePasswordVisible(false)} />
+        )}
+        {isDeleteAccountVisible && (
+            <DeleteAccountModal 
+                onClose={() => setIsDeleteAccountVisible(false)}
+                onConfirmDelete={handleDeleteAccount}
+            />
+        )}
       </Suspense>
       
       <ComparisonTray 
